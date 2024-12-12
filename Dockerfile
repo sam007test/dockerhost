@@ -43,7 +43,7 @@ def serve_static(path):\n\
 from webapp.app import *\n\
 \n\
 if __name__ == '__main__':\n\
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))\n\
+    app.run(host='0.0.0.0', port=(os.environ.get('PORT', 5000)))\n\
 " > combined_app.py
 
 # Create an entrypoint script
