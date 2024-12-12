@@ -5,7 +5,7 @@ FROM nikolaik/python-nodejs:python3.13-nodejs23-alpine
 WORKDIR /app
 
 # Install necessary system dependencies
-RUN apk add --no-cache unzip git
+RUN apk add --no-cache unzip git curl
 
 # Clone the backend repository
 RUN git clone https://github.com/SanshruthR/SAP_FLASK_backend.git
@@ -25,18 +25,18 @@ RUN pip install -r webapp/requirements.txt
 # Install Caddy
 RUN apk add --no-cache caddy
 
-# Create Caddyfile for reverse proxy
-RUN echo "http://0.0.0.0 {\n\
-  reverse_proxy /api/* 127.0.0.1:5000\n\
-  reverse_proxy /* 127.0.0.1:8080\n\
+# Create Caddyfile for reverse proxy with proper binding
+RUN echo "0.0.0.0:$PORT {
+    reverse_proxy /api/* localhost:5000
+    reverse_proxy /* localhost:8080
 }" > /etc/caddy/Caddyfile
 
-# Expose the required port
-EXPOSE 80
+# Expose the port from environment
+EXPOSE $PORT
 
 # Create an entrypoint script to run both services and Caddy
 RUN echo '#!/bin/sh' > /entrypoint.sh && \
-    echo 'npm start & python3 webapp/app.py & caddy run --config /etc/caddy/Caddyfile' >> /entrypoint.sh && \
+    echo 'python3 webapp/app.py & npm start & caddy run --config /etc/caddy/Caddyfile' >> /entrypoint.sh && \
     chmod +x /entrypoint.sh
 
 # Set the entrypoint
