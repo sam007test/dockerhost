@@ -52,7 +52,7 @@ RUN echo '#!/bin/sh' > /entrypoint.sh && \
     chmod +x /entrypoint.sh
 
 # Expose the port
-EXPOSE $PORT
+EXPOSE 5000
 
 # Set the entrypoint
 ENTRYPOINT ["/entrypoint.sh"]
