@@ -25,22 +25,25 @@ RUN pip install -r webapp/requirements.txt
 # Initialize npm project and install express
 RUN npm init -y && npm install express
 
-# Create a port forwarding server
+# Create port forwarding server
 RUN echo "const express = require('express');" > port_forward.js && \
     echo "const { spawn } = require('child_process');" >> port_forward.js && \
     echo "const app = express();" >> port_forward.js && \
     echo "const PORT = process.env.PORT || 5000;" >> port_forward.js && \
-    echo "" >> port_forward.js && \
-    echo "app.use((req, res) => {" >> port_forward.js && \
+    echo "app.get('*', (req, res) => {" >> port_forward.js && \
     echo "  const pythonProcess = spawn('python3', ['webapp/app.py']);" >> port_forward.js && \
-    echo "  pythonProcess.stdout.pipe(res);" >> port_forward.js && \
+    echo "  pythonProcess.stdout.on('data', (data) => {" >> port_forward.js && \
+    echo "    res.write(data);" >> port_forward.js && \
+    echo "  });" >> port_forward.js && \
     echo "  pythonProcess.stderr.on('data', (data) => {" >> port_forward.js && \
-    echo "    console.error(`stderr: ${data}`);" >> port_forward.js && \
+    echo "    console.error(\`stderr: \${data}\`);" >> port_forward.js && \
+    echo "  });" >> port_forward.js && \
+    echo "  pythonProcess.on('close', (code) => {" >> port_forward.js && \
+    echo "    res.end();" >> port_forward.js && \
     echo "  });" >> port_forward.js && \
     echo "});" >> port_forward.js && \
-    echo "" >> port_forward.js && \
     echo "app.listen(PORT, '0.0.0.0', () => {" >> port_forward.js && \
-    echo "  console.log(`Server running on port ${PORT}`);" >> port_forward.js && \
+    echo "  console.log(\`Server running on port \${PORT}\`);" >> port_forward.js && \
     echo "});" >> port_forward.js
 
 # Modify package.json to include start script
