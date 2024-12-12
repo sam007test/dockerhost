@@ -22,23 +22,24 @@ RUN npm install -g @ui5/cli@latest
 # Install Python dependencies
 RUN pip install -r webapp/requirements.txt
 
-# Configure Nginx
-RUN echo "\
-server {\n\
-    listen 80;\n\
-    location / {\n\
-        proxy_pass http://127.0.0.1:8080;\n\
-        proxy_set_header Host $host;\n\
-        proxy_set_header X-Real-IP $remote_addr;\n\
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n\
-    }\n\
-    location /api/ {\n\
-        proxy_pass http://127.0.0.1:5000;\n\
-        proxy_set_header Host $host;\n\
-        proxy_set_header X-Real-IP $remote_addr;\n\
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n\
-    }\n\
-}" > /etc/nginx/conf.d/default.conf
+# Configure Nginx using a heredoc
+RUN cat <<EOF > /etc/nginx/conf.d/default.conf
+server {
+    listen 80;
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+    location /api/ {
+        proxy_pass http://127.0.0.1:5000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+}
+EOF
 
 # Expose the required ports
 EXPOSE 80
