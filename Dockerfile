@@ -5,7 +5,7 @@ FROM nikolaik/python-nodejs:python3.13-nodejs23-alpine
 WORKDIR /app
 
 # Install necessary system dependencies
-RUN apk add --no-cache unzip git nginx
+RUN apk add --no-cache unzip git
 
 # Clone the backend repository
 RUN git clone https://github.com/SanshruthR/SAP_FLASK_backend.git
@@ -22,31 +22,20 @@ RUN npm install -g @ui5/cli@latest
 # Install Python dependencies
 RUN pip install -r webapp/requirements.txt
 
-# Configure Nginx using a heredoc
-RUN cat <<EOF > /etc/nginx/conf.d/default.conf
-server {
-    listen 80;
-    location / {
-        proxy_pass http://127.0.0.1:8080;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    }
-    location /api/ {
-        proxy_pass http://127.0.0.1:5000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    }
-}
-EOF
+# Add Caddy web server
+RUN apk add --no-cache caddy
+
+# Create Caddyfile for reverse proxy
+RUN echo ":\n\
+  reverse_proxy /api/* 127.0.0.1:5000\n\
+  reverse_proxy /* 127.0.0.1:8080" > /etc/caddy/Caddyfile
 
 # Expose the required ports
 EXPOSE 80
 
-# Create an entrypoint script to run both services and Nginx
+# Create an entrypoint script to run both services and Caddy
 RUN echo '#!/bin/sh' > /entrypoint.sh && \
-    echo 'nginx & npm start & python3 webapp/app.py' >> /entrypoint.sh && \
+    echo 'caddy run --config /etc/caddy/Caddyfile & npm start & python3 webapp/app.py' >> /entrypoint.sh && \
     chmod +x /entrypoint.sh
 
 # Set the entrypoint
