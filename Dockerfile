@@ -22,50 +22,37 @@ RUN npm install -g @ui5/cli@latest
 # Install Python dependencies
 RUN pip install -r webapp/requirements.txt
 
-# Create a Node.js server for routing
-RUN echo "const express = require('express');" > server.js && \
-    echo "const { spawn } = require('child_process');" >> server.js && \
-    echo "const path = require('path');" >> server.js && \
-    echo "const app = express();" >> server.js && \
-    echo "const PORT = process.env.PORT || 5000;" >> server.js && \
-    echo "" >> server.js && \
-    echo "// Serve static files from frontend directory" >> server.js && \
-    echo "app.use(express.static(path.join(__dirname, 'frontend')));" >> server.js && \
-    echo "" >> server.js && \
-    echo "// Route to serve index.html for the root path" >> server.js && \
-    echo "app.get('/', (req, res) => {" >> server.js && \
-    echo "  res.sendFile(path.join(__dirname, 'frontend', 'index.html'));" >> server.js && \
-    echo "});" >> server.js && \
-    echo "" >> server.js && \
-    echo "// Route to run Python backend" >> server.js && \
-    echo "app.get('/api/*', (req, res) => {" >> server.js && \
-    echo "  const pythonProcess = spawn('python3', ['webapp/app.py']);" >> server.js && \
-    echo "  pythonProcess.stdout.on('data', (data) => {" >> server.js && \
-    echo "    res.write(data);" >> server.js && \
-    echo "  });" >> server.js && \
-    echo "  pythonProcess.stderr.on('data', (data) => {" >> server.js && \
-    echo "    console.error(`stderr: ${data}`);" >> server.js && \
-    echo "  });" >> server.js && \
-    echo "  pythonProcess.on('close', (code) => {" >> server.js && \
-    echo "    res.end();" >> server.js && \
-    echo "  });" >> server.js && \
-    echo "});" >> server.js && \
-    echo "" >> server.js && \
-    echo "app.listen(PORT, '0.0.0.0', () => {" >> server.js && \
-    echo "  console.log(`Server running on port ${PORT}`);" >> server.js && \
-    echo "});" >> server.js
+# Initialize npm project and install express
+RUN npm init -y && npm install express
 
-# Install Node.js dependencies
-RUN npm init -y && \
-    npm install express
+# Create a port forwarding server
+RUN echo "const express = require('express');" > port_forward.js && \
+    echo "const { spawn } = require('child_process');" >> port_forward.js && \
+    echo "const app = express();" >> port_forward.js && \
+    echo "const PORT = process.env.PORT || 5000;" >> port_forward.js && \
+    echo "" >> port_forward.js && \
+    echo "app.use((req, res) => {" >> port_forward.js && \
+    echo "  const pythonProcess = spawn('python3', ['webapp/app.py']);" >> port_forward.js && \
+    echo "  pythonProcess.stdout.pipe(res);" >> port_forward.js && \
+    echo "  pythonProcess.stderr.on('data', (data) => {" >> port_forward.js && \
+    echo "    console.error(`stderr: ${data}`);" >> port_forward.js && \
+    echo "  });" >> port_forward.js && \
+    echo "});" >> port_forward.js && \
+    echo "" >> port_forward.js && \
+    echo "app.listen(PORT, '0.0.0.0', () => {" >> port_forward.js && \
+    echo "  console.log(`Server running on port ${PORT}`);" >> port_forward.js && \
+    echo "});" >> port_forward.js
 
-# Create an entrypoint script
+# Modify package.json to include start script
+RUN sed -i 's/"scripts": {/"scripts": { "start": "node port_forward.js",/g' package.json
+
+# Expose the required ports
+EXPOSE 8080 5000
+
+# Create an entrypoint script to run both services
 RUN echo '#!/bin/sh' > /entrypoint.sh && \
-    echo 'node server.js' >> /entrypoint.sh && \
+    echo 'npm start & python3 webapp/app.py' >> /entrypoint.sh && \
     chmod +x /entrypoint.sh
-
-# Expose the port
-EXPOSE $PORT
 
 # Set the entrypoint
 ENTRYPOINT ["/entrypoint.sh"]
