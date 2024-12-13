@@ -5,34 +5,48 @@ FROM nikolaik/python-nodejs:python3.13-nodejs23-alpine
 WORKDIR /app
 
 # Install necessary system dependencies
-RUN apk add --no-cache unzip git nginx
+RUN apk add --no-cache unzip git
 
-# Clone repository
+# Clone the repository
 RUN git clone https://github.com/SanshruthR/SAP_FLASK_backend.git
 
-# Set working directory to project
+# Navigate to the backend directory
 WORKDIR /app/SAP_FLASK_backend/
 
-# Unzip project files
+# Unzip the required file
 RUN unzip "Browse Orders.zip"
 
-# Install global npm package
+# Install global npm package for UI5 CLI
 RUN npm install -g @ui5/cli@latest
 
-# Python dependencies
+# Install Python dependencies
 RUN pip install -r webapp/requirements.txt
 
-# Remove default nginx config and create minimal proxy config
-RUN rm /etc/nginx/nginx.conf && \
-    echo 'events { worker_connections 1024; }' > /etc/nginx/nginx.conf && \
-    echo 'http { server { listen 80; location / { proxy_pass http://localhost:5000; } } }' >> /etc/nginx/nginx.conf
+# Create a Node.js-based reverse proxy
+RUN echo "const http = require('http');" > proxy.js && \
+    echo "const proxy = require('http-proxy').createProxyServer();" >> proxy.js && \
+    echo "const server = http.createServer((req, res) => {" >> proxy.js && \
+    echo "    if (req.url === '/proxy-health') {" >> proxy.js && \
+    echo "        res.writeHead(200, {'Content-Type': 'application/json'});" >> proxy.js && \
+    echo "        res.end(JSON.stringify({status: 'proxy-healthy'}));" >> proxy.js && \
+    echo "    } else {" >> proxy.js && \
+    echo "        proxy.web(req, res, { target: 'http://0.0.0.0:5000' });" >> proxy.js && \
+    echo "    }" >> proxy.js && \
+    echo "});" >> proxy.js && \
+    echo "server.listen(8080, '0.0.0.0', () => {" >> proxy.js && \
+    echo "    console.log('Reverse proxy running on http://0.0.0.0:8080');" >> proxy.js && \
+    echo "});" >> proxy.js
 
-# Expose ports
-EXPOSE 80 8080 5000
+# Install the required Node.js dependency for the reverse proxy
+RUN npm install http-proxy
 
-# Create entrypoint script to run services
+# Expose the required ports
+EXPOSE 8080 5000
+
+# Create an entrypoint script to run both services
 RUN echo '#!/bin/sh' > /entrypoint.sh && \
-    echo 'nginx & npm start & python3 webapp/app.py' >> /entrypoint.sh && \
+    echo "python3 -m flask run --host=0.0.0.0 --port=5000 &" >> /entrypoint.sh && \
+    echo "node proxy.js" >> /entrypoint.sh && \
     chmod +x /entrypoint.sh
 
 # Set the entrypoint
