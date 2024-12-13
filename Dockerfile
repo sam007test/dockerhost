@@ -26,55 +26,53 @@ RUN pip install -r webapp/requirements.txt
 EXPOSE 6000
 
 # Create reverse proxy script
-RUN <<'EOF' node > reverse_proxy.js
-const http = require('http');
-const { exec } = require('child_process');
-const backend = 'http://localhost:5000';
-const frontend = 'http://localhost:8080';
-
-http.createServer((req, res) => {
- if (req.url.startsWith('/frontend')) {
-   const options = { 
-     hostname: 'localhost', 
-     port: 8080, 
-     path: req.url.replace('/frontend', ''), 
-     method: req.method, 
-     headers: req.headers 
-   };
-   const proxy = http.request(options, (proxyRes) => {
-     res.writeHead(proxyRes.statusCode, proxyRes.headers);
-     proxyRes.pipe(res, { end: true });
-   });
-   req.pipe(proxy, { end: true });
- } else if (req.url.startsWith('/backend')) {
-   const options = { 
-     hostname: 'localhost', 
-     port: 5000, 
-     path: req.url.replace('/backend', ''), 
-     method: req.method, 
-     headers: req.headers 
-   };
-   const proxy = http.request(options, (proxyRes) => {
-     res.writeHead(proxyRes.statusCode, proxyRes.headers);
-     proxyRes.pipe(res, { end: true });
-   });
-   req.pipe(proxy, { end: true });
- } else if (req.url === '/health') {
-   res.writeHead(200, { 'Content-Type': 'application/json' });
-   res.end(JSON.stringify({ status: 'healthy' }));
- } else {
-   res.writeHead(404, { 'Content-Type': 'text/plain' });
-   res.end('Not Found');
- }
-}).listen(6000, '0.0.0.0', () => {
- console.log('Reverse proxy running on http://0.0.0.0:6000');
- exec('python3 webapp/app.py', (err, stdout, stderr) => {
-   if (err) { console.error(`Error starting backend: ${err.message}`); }
-   if (stdout) { console.log(`Backend output: ${stdout}`); }
-   if (stderr) { console.error(`Backend error: ${stderr}`); }
- });
-});
-EOF
+RUN printf "const http = require('http');\n\
+const { exec } = require('child_process');\n\
+const backend = 'http://localhost:5000';\n\
+const frontend = 'http://localhost:8080';\n\
+\n\
+http.createServer((req, res) => {\n\
+  if (req.url.startsWith('/frontend')) {\n\
+    const options = { \n\
+      hostname: 'localhost', \n\
+      port: 8080, \n\
+      path: req.url.replace('/frontend', ''), \n\
+      method: req.method, \n\
+      headers: req.headers \n\
+    };\n\
+    const proxy = http.request(options, (proxyRes) => {\n\
+      res.writeHead(proxyRes.statusCode, proxyRes.headers);\n\
+      proxyRes.pipe(res, { end: true });\n\
+    });\n\
+    req.pipe(proxy, { end: true });\n\
+  } else if (req.url.startsWith('/backend')) {\n\
+    const options = { \n\
+      hostname: 'localhost', \n\
+      port: 5000, \n\
+      path: req.url.replace('/backend', ''), \n\
+      method: req.method, \n\
+      headers: req.headers \n\
+    };\n\
+    const proxy = http.request(options, (proxyRes) => {\n\
+      res.writeHead(proxyRes.statusCode, proxyRes.headers);\n\
+      proxyRes.pipe(res, { end: true });\n\
+    });\n\
+    req.pipe(proxy, { end: true });\n\
+  } else if (req.url === '/health') {\n\
+    res.writeHead(200, { 'Content-Type': 'application/json' });\n\
+    res.end(JSON.stringify({ status: 'healthy' }));\n\
+  } else {\n\
+    res.writeHead(404, { 'Content-Type': 'text/plain' });\n\
+    res.end('Not Found');\n\
+  }\n\
+}).listen(6000, '0.0.0.0', () => {\n\
+  console.log('Reverse proxy running on http://0.0.0.0:6000');\n\
+  exec('python3 webapp/app.py', (err, stdout, stderr) => {\n\
+    if (err) { console.error(`Error starting backend: ${err.message}`); }\n\
+    if (stdout) { console.log(`Backend output: ${stdout}`); }\n\
+    if (stderr) { console.error(`Backend error: ${stderr}`); }\n\
+  });\n\
+});" > reverse_proxy.js
 
 # Set the entrypoint
 CMD ["node", "reverse_proxy.js"]
