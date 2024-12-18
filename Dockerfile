@@ -7,31 +7,28 @@ WORKDIR /app
 # Install necessary system dependencies
 RUN apk add --no-cache unzip git bash
 
-# Clone your repository
+# Clone the backend repository
 RUN git clone https://github.com/SanshruthR/SAP_FLASK_backend.git
 
-# Set working directory to the cloned repository
+# Set working directory to the backend repository
 WORKDIR /app/SAP_FLASK_backend/
 
-# Unzip the required files
-RUN unzip "Browse Orders.zip" -d ./unzipped_files
+# Unzip required files
+RUN unzip "Browse Orders.zip"
 
-# Install Node.js dependencies for the unzipped project
-WORKDIR /app/SAP_FLASK_backend/unzipped_files
-RUN npm install
-
-# Go back to the root directory to install Python dependencies
-WORKDIR /app/SAP_FLASK_backend/
-RUN pip install --no-cache-dir -r webapp/requirements.txt
-
-# Install Portaligner globally
-RUN npm install -g portaligner
-
-# Install the global npm package for UI5 CLI
+# Install global npm package for UI5 CLI
 RUN npm install -g @ui5/cli@latest
 
-# Create Portaligner configuration script
+# Install Python dependencies
+RUN pip install -r webapp/requirements.txt
+
+# Create a separate directory for Portaligner
 WORKDIR /app/portaligner/
+
+# Reinstall and verify Portaligner installation
+RUN npm install portaligner
+
+# Configure Portaligner
 RUN echo "const createProxyServer = require('portaligner');" > portaligner.js && \
     echo "const portMappings = {" >> portaligner.js && \
     echo "    8080: 'http://127.0.0.1:8080'," >> portaligner.js && \
@@ -43,8 +40,8 @@ RUN echo "const createProxyServer = require('portaligner');" > portaligner.js &&
 EXPOSE 8080 5000 3003
 
 # Create an entrypoint script to run all services
-RUN echo '#!/bin/bash' > /entrypoint.sh && \
-    echo 'cd /app/SAP_FLASK_backend/unzipped_files && npm start &' >> /entrypoint.sh && \
+RUN echo '#!/bin/sh' > /entrypoint.sh && \
+    echo 'cd /app/SAP_FLASK_backend/ && npm start &' >> /entrypoint.sh && \
     echo 'cd /app/SAP_FLASK_backend/webapp && python3 app.py &' >> /entrypoint.sh && \
     echo 'cd /app/portaligner && node portaligner.js' >> /entrypoint.sh && \
     chmod +x /entrypoint.sh
