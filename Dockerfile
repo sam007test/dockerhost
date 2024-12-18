@@ -1,6 +1,15 @@
 # Base image
 FROM nikolaik/python-nodejs:python3.13-nodejs23-alpine
 
+RUN npm install -g portaligner
+
+RUN echo "const createProxyServer = require('portaligner');" > proxy.js && \
+    echo "const portMappings = { " >> proxy.js && \
+    echo "    8080: 'http://127.0.0.1:8080'," >> proxy.js && \
+    echo "    5000: 'http://127.0.0.1:5000'" >> proxy.js && \
+    echo "};" >> proxy.js && \
+    echo "createProxyServer({ portMappings });" >> proxy.js
+
 # Set working directory
 WORKDIR /app
 
@@ -23,14 +32,8 @@ RUN npm install -g @ui5/cli@latest
 # Python dependencies
 RUN pip install -r webapp/requirements.txt
 
-RUN npm install -g portaligner
-# Create a proxy configuration file
-RUN echo "const createProxyServer = require('portaligner');" > proxy.js && \
-    echo "const portMappings = { " >> proxy.js && \
-    echo "    8080: 'http://127.0.0.1:8080'," >> proxy.js && \
-    echo "    5000: 'http://127.0.0.1:5000'" >> proxy.js && \
-    echo "};" >> proxy.js && \
-    echo "createProxyServer({ portMappings });" >> proxy.js
+
+
 
 # Expose the required ports
 EXPOSE 3003 8080 5000
