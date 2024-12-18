@@ -31,7 +31,7 @@ RUN npm install portaligner
 # Configure Portaligner
 RUN echo "const createProxyServer = require('portaligner');" > portaligner.js && \
     echo "const portMappings = {" >> portaligner.js && \
-    echo "    8080: 'http://127.0.0.1:8080'," >> portaligner.js && \
+    echo "    8080: 'http://localhost:8080'," >> portaligner.js && \
     echo "    5000: 'http://127.0.0.1:5000'" >> portaligner.js && \
     echo "};" >> portaligner.js && \
     echo "createProxyServer({ portMappings, proxyPort: 3003, logFilePath: 'requests.log' });" >> portaligner.js
