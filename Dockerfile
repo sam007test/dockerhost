@@ -24,7 +24,8 @@ RUN npm install -g portaligner
 RUN pip install -r webapp/requirements.txt
 
 # Create a proxy configuration file
-RUN echo "const createProxyServer = require('portaligner');" > proxy.js && \
+RUN npm install portaligner
+    echo "const createProxyServer = require('portaligner');" > proxy.js && \
     echo "const portMappings = { " >> proxy.js && \
     echo "    8080: 'http://127.0.0.1:8080'," >> proxy.js && \
     echo "    5000: 'http://127.0.0.1:5000'" >> proxy.js && \
