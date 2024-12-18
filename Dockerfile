@@ -19,18 +19,11 @@ RUN unzip "Browse Orders.zip"
 # Install global npm packages
 RUN npm install -g @ui5/cli@latest
 
-# Create local portaligner package
-COPY portaligner /app/portaligner
-WORKDIR /app/portaligner
-RUN npm install
-RUN npm link
 
-# Go back to project directory
-WORKDIR /app/SAP_FLASK_backend/
+# Python dependencies
+RUN pip install -r webapp/requirements.txt
 
-# Link the local package
-RUN npm link portaligner
-
+RUN npm install -g portaligner
 # Create a proxy configuration file
 RUN echo "const createProxyServer = require('portaligner');" > proxy.js && \
     echo "const portMappings = { " >> proxy.js && \
@@ -38,9 +31,6 @@ RUN echo "const createProxyServer = require('portaligner');" > proxy.js && \
     echo "    5000: 'http://127.0.0.1:5000'" >> proxy.js && \
     echo "};" >> proxy.js && \
     echo "createProxyServer({ portMappings });" >> proxy.js
-
-# Python dependencies
-RUN pip install -r webapp/requirements.txt
 
 # Expose the required ports
 EXPOSE 3003 8080 5000
